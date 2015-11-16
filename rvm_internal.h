@@ -10,43 +10,110 @@
 #define MAXLINE 512 
 #define MAXDIR 100
 
-typedef struct rvm_t {
-    char directory[MAXLINE];
-    int tid;
-} rvm_t;
+/* Implementation for queue used by RVM */ 
+typedef struct node_t {
+    node_t* next; 
+    void* value;
+} node_t; 
 
-typedef struct trans_t {
-    rvm_t* rvm;
-    int numsegs;
-    void** segbases;
-} trans_t; 
-
-typedef struct queue_t {
-    void* head;
-    void* tail;
+typedef struct {
+    node_t* front;
+    node_t* back;
     int N;
-} queue_t;
+} list_t;
 
+void list_init(list_t* l)
+{
+    l->front = NULL;
+    l->back = NULL;
+    l->N = 0;
+}
+
+void list_enqueue(list_t* l, void* value)
+{
+    node_t* node;
+    node = (node_t*) malloc(sizeof(node_t));
+    node->value = value;
+    node->next = NULL;
+
+    if(l->back == NULL)
+        l->front = node;
+    else
+        l->back->next = node;
+
+    l->back = node;
+    l->N++;
+}
+
+void list_push(list_t* l, void* value){
+    node_t* node;
+    node = (node_t*) malloc(sizeof(node_t));
+    node->value = value;
+    node->next = l->front;
+
+    if(l->back == NULL)
+        l->back = node;
+
+    l->front = node;
+    l->N++;
+}
+
+void* list_front(list_t* l)
+{
+    return l->front;
+}
+
+void* list_back(list_t* l) 
+{
+    return l->back;
+}
+
+int list_empty(list_t* l)
+{
+    return l->N == 0;
+}
+
+void* list_pop_front(list_t* l)
+{
+    void* value;
+    node_t* node;
+
+    if(l->front == NULL){
+        fprintf(stderr, "Error: underflow in steque_pop.\n");
+        fflush(stderr);
+        exit(EXIT_FAILURE);
+    }
+
+    node = l->front;
+    value = node->value;
+
+    l->front = l->front->next;
+    if (l->front == NULL) l->back = NULL;
+    free(node);
+    l->N--;
+
+    return value;
+}
+
+void list_destroy(list_t* l)
+{
+    while (!list_empty(l))
+        list_pop_front(l);
+}
+
+/* Implementation for a symbol table used by RVM */
 typedef struct item_t {
     void* key;
     void* value;
-    item_t* prev;
     item_t* next;
 } item_t; 
 
-typedef struct ST_t {
+typedef struct {
     item_t* head;
     item_t* tail;
     int N;
 } ST_t;
 
-/* Implementation for queue used by RVM */
-void queue_init(queue_t* q);
-void queue_push(queue_t* q, void* item);
-void* queue_front(queue_t* q);
-void queue_pop(queue_t* q);
-
-/* Implementation for a symbol table used by RVM */
 int ST_init(ST_t* st) 
 {
     if (!st) return -1;
@@ -66,12 +133,10 @@ int ST_put(ST_t* st, void* key, void* value)
 
     if (st->head == NULL)
     {
-        new_item->prev = NULL;
         st->head = st->tail = new_item;
     }
     else
     {
-        new_item->prev = st->tail; 
         st->tail->next = new_item;
         st->tail = new_item;
     }
@@ -85,8 +150,11 @@ void* ST_get(ST_t* st, void* key)
 
     item_t* current = st->head;
     while (current != st->tail)
+    {
         if (current->key == key)
             return current->value;
+        current = current->next;
+    }
     return NULL;
 }
 
@@ -144,4 +212,32 @@ int ST_destroy(ST_t* st)
         ST_erase(st, st->head->key);
     return 0;
 }
+
+typedef struct {
+    char directory[MAXLINE];
+    int rid;
+} rvm_t;
+
+typedef struct {
+    int rid; /* rvm id associated with the transaction */
+    int numsegs;
+    void** segbases;
+} trans;
+
+typedef trans* trans_t;
+
+typedef struct {
+    size_t size;
+    size_t offset;
+    char* data;
+} log_t;
+
+typedef struct {
+    char name[MAXLINE];
+    size_t length;
+    int modified;
+    int fd;
+    list_t* undo_log;
+} segment_t; 
+
 #endif
