@@ -238,6 +238,7 @@ typedef struct {
     int modified;
     int fd;
     list_t* undo_log;
+    list_t* redo_log;
 } segment_t; 
 
 #endif
