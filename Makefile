@@ -2,18 +2,18 @@
 
 CFLAGS  = -Wall -g -I.
 LFLAGS  =
-CC      = g++
+CC      = gcc
 RM      = /bin/rm -rf
 AR      = ar rc
 RANLIB  = ranlib
 
 LIBRARY = librvm.a
 
-LIB_SRC = rvm.cpp
+LIB_SRC = rvm.c
 
-LIB_OBJ = $(patsubst %.cpp,%.o,$(LIB_SRC))
+LIB_OBJ = $(patsubst %.c,%.o,$(LIB_SRC))
 
-%.o: %.cpp
+%.o: %.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(LIBRARY): $(LIB_OBJ)

@@ -12,7 +12,7 @@
 
 /* Implementation for queue used by RVM */ 
 typedef struct node_t {
-    node_t* next; 
+    struct node_t* next; 
     void* value;
 } node_t; 
 
@@ -105,7 +105,7 @@ void list_destroy(list_t* l)
 typedef struct item_t {
     void* key;
     void* value;
-    item_t* next;
+    struct item_t* next;
 } item_t; 
 
 typedef struct {
