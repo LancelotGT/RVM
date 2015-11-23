@@ -26,7 +26,10 @@ $(LIBRARY): $(LIB_OBJ)
 tests: $(LIBRARY)
 	@mkdir -p bin
 	$(CC) -o $(BIN)/basic $(TEST_DIR)/basic.c $(CFLAGS) -L. -lrvm 
-	$(BIN)/basic
+	$(CC) -o $(BIN)/abort $(TEST_DIR)/abort.c $(CFLAGS) -L. -lrvm  
+	$(CC) -o $(BIN)/multi $(TEST_DIR)/multi.c $(CFLAGS) -L. -lrvm   
+	$(CC) -o $(BIN)/multi-abort $(TEST_DIR)/multi-abort.c $(CFLAGS) -L. -lrvm    
+	$(CC) -o $(BIN)/truncate $(TEST_DIR)/truncate.c $(CFLAGS) -L. -lrvm    
 
 clean:
 	$(RM) $(LIBRARY) $(LIB_OBJ)
