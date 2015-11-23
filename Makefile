@@ -1,11 +1,14 @@
 #### RVM Library Makefile
 
-CFLAGS  = -Wall -g -I.
+CFLAGS  = -Wall -g -g3 -I.
 LFLAGS  =
 CC      = gcc
 RM      = /bin/rm -rf
 AR      = ar rc
 RANLIB  = ranlib
+PROJ_DIR = ./
+TEST_DIR = ./testcases
+BIN = ./bin
 
 LIBRARY = librvm.a
 
@@ -20,5 +23,11 @@ $(LIBRARY): $(LIB_OBJ)
 	$(AR) $(LIBRARY) $(LIB_OBJ)
 	$(RANLIB) $(LIBRARY)
 
+tests: $(LIBRARY)
+	@mkdir -p bin
+	$(CC) -o $(BIN)/basic $(TEST_DIR)/basic.c $(CFLAGS) -L. -lrvm 
+	$(BIN)/basic
+
 clean:
 	$(RM) $(LIBRARY) $(LIB_OBJ)
+	$(RM) bin

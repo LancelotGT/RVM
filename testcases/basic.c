@@ -14,6 +14,8 @@
 /* proc1 writes some data, commits it, then exits */
 void proc1() 
 {
+     /* Redirect stderr to stdout (so that driver will get all output
+      * on the pipe connected to stdout) */
      rvm_t rvm;
      trans_t trans;
      char* segs[1];
@@ -21,7 +23,7 @@ void proc1()
      rvm = rvm_init("rvm_segments");
      rvm_destroy(rvm, "testseg");
      segs[0] = (char *) rvm_map(rvm, "testseg", 10000);
-
+     printf("data segment: %s\n", segs[0]);
      
      trans = rvm_begin_trans(rvm, 1, (void **) segs);
      
@@ -31,9 +33,11 @@ void proc1()
      rvm_about_to_modify(trans, segs[0], OFFSET2, 100);
      sprintf(segs[0]+OFFSET2, TEST_STRING);
      
+     printf("commit transction\n");
+     fflush(stdout);
      rvm_commit_trans(trans);
 
-     abort();
+     //abort();
 }
 
 
@@ -42,9 +46,7 @@ void proc2()
 {
      char* segs[1];
      rvm_t rvm;
-     
      rvm = rvm_init("rvm_segments");
-
      segs[0] = (char *) rvm_map(rvm, "testseg", 10000);
      if(strcmp(segs[0], TEST_STRING)) {
 	  printf("ERROR: first hello not present\n");
@@ -62,21 +64,21 @@ void proc2()
 
 int main(int argc, char **argv)
 {
-     int pid;
-
-     pid = fork();
-     if(pid < 0) {
-	  perror("fork");
-	  exit(2);
-     }
-     if(pid == 0) {
-	  proc1();
-	  exit(0);
-     }
-
-     waitpid(pid, NULL, 0);
-
-     proc2();
-
+//     int pid;
+//
+//     pid = fork();
+//     if(pid < 0) {
+//	  perror("fork");
+//	  exit(2);
+//     }
+//     if(pid == 0) {
+//	  proc1();
+//	  exit(0);
+//     }
+//
+//     waitpid(pid, NULL, 0);
+//
+//     proc2();
+     proc1();
      return 0;
 }

@@ -1,5 +1,5 @@
 /*
- *  Internal data types and structures used by RVM
+ *  Internal data structures used by RVM
  */
 
 #ifndef __LIBRVM_INTERNAL__
@@ -7,8 +7,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#define MAXLINE 512 
-#define MAXDIR 100
 
 /* Implementation for queue used by RVM */ 
 typedef struct node_t {
@@ -149,12 +147,15 @@ void* ST_get(ST_t* st, void* key)
     if (!st) return NULL;
 
     item_t* current = st->head;
+
     while (current != st->tail)
     {
         if (current->key == key)
             return current->value;
         current = current->next;
     }
+    if (current->key == key)
+        return current->value;
     return NULL;
 }
 
@@ -212,33 +213,5 @@ int ST_destroy(ST_t* st)
         ST_erase(st, st->head->key);
     return 0;
 }
-
-typedef struct {
-    char directory[MAXLINE];
-    int rid;
-} rvm_t;
-
-typedef struct {
-    int rid; /* rvm id associated with the transaction */
-    int numsegs;
-    void** segbases;
-} trans;
-
-typedef trans* trans_t;
-
-typedef struct {
-    size_t size;
-    size_t offset;
-    char* data;
-} log_t;
-
-typedef struct {
-    char name[MAXLINE];
-    size_t length;
-    int modified;
-    int fd;
-    list_t* undo_log;
-    list_t* redo_log;
-} segment_t; 
 
 #endif
