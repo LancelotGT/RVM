@@ -23,8 +23,21 @@ void proc1()
      rvm = rvm_init("rvm_segments");
      rvm_destroy(rvm, "testseg");
      segs[0] = (char *) rvm_map(rvm, "testseg", 10000);
-     printf("data segment: %s\n", segs[0]);
-     
+
+     printf("check recovered data:\n");
+     int i = 0;
+     while (i < 100) {
+        printf("%c", *(char*) (segs[0] + i));
+        i++;
+     }
+     printf("\n"); 
+     i = 0;
+     while (i < 100) {
+        printf("%c", *(char*) (segs[0] + i + 1000));
+        i++;
+     }
+     printf("\n");
+
      trans = rvm_begin_trans(rvm, 1, (void **) segs);
      
      rvm_about_to_modify(trans, segs[0], 0, 100);
@@ -37,7 +50,7 @@ void proc1()
      fflush(stdout);
      rvm_commit_trans(trans);
 
-     //abort();
+     abort();
 }
 
 
@@ -64,21 +77,20 @@ void proc2()
 
 int main(int argc, char **argv)
 {
-//     int pid;
-//
-//     pid = fork();
-//     if(pid < 0) {
-//	  perror("fork");
-//	  exit(2);
-//     }
-//     if(pid == 0) {
-//	  proc1();
-//	  exit(0);
-//     }
-//
-//     waitpid(pid, NULL, 0);
-//
-//     proc2();
-     proc1();
+     int pid;
+
+     pid = fork();
+     if(pid < 0) {
+	  perror("fork");
+	  exit(2);
+     }
+     if(pid == 0) {
+	  proc1();
+	  exit(0);
+     }
+
+     waitpid(pid, NULL, 0);
+
+     proc2();
      return 0;
 }

@@ -327,11 +327,14 @@ void apply_log(char* logpath, char* segpath)
     if (!log_len)
         return; /* if length of log is zero, skip it */
 
-    char* logfile = (char*) Mmap(NULL, log_len, PROT_READ, MAP_PRIVATE, fd, 0);
+    char* logfile = (char*) Mmap(NULL, log_len, PROT_READ, MAP_SHARED, fd, 0);
 
     fstat(data_fd, &st2);
     int data_len = st2.st_size; 
-    char* datafile = (char*) Mmap(NULL, data_len, PROT_READ | PROT_WRITE, MAP_PRIVATE, data_fd, 0); 
+    char* datafile = (char*) Mmap(NULL, data_len, PROT_READ | PROT_WRITE, MAP_SHARED, data_fd, 0); 
+
+    Close(fd);
+    Close(data_fd); 
 
     int pos = 0;
     while (pos < log_len)
@@ -342,14 +345,18 @@ void apply_log(char* logpath, char* segpath)
         int offset = *(int*) (logfile + pos); 
         printf("log segment offset: %d\n", offset); 
         pos += 4;
-        memcpy(datafile + offset, logfile + pos, size);
+
+        /* skip header and transfer data */
+        memcpy(datafile + offset + sizeof(int), logfile + pos, size);
+        int i;
+        for (i = 0; i < size; i++)
+            printf("%c", *(char*) (datafile + offset + 4 + i));
+        printf("\n");
         pos += size;
     }
 
     Munmap(logfile, log_len);
     Munmap(datafile, data_len);
-    Close(fd);
-    Close(data_fd);
 
     /* clear the content of log segment */
     remove(logpath);
