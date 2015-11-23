@@ -14,7 +14,7 @@
 #include "rvm.h"
 #include "rvm_internal.h"
 
-/* private function prototypes */
+/* private syscall wrappers */
 static int Open(const char* path, int oflag);
 static void Close(int fd);
 static void* Mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset);
@@ -43,7 +43,7 @@ rvm_t rvm_init(const char *directory)
 
     struct stat st;
     if (stat(directory, &st) == -1)
-        mkdir(directory, 0777); /* create directory if it does not exist */
+        mkdir(directory, 0700); /* create directory if it does not exist */
 
     strcpy(rvm.directory, directory); /* copy the directory name */
     ST_init(&segment_table[rvm.rid]); /* init the segment lookup table */
