@@ -9,7 +9,7 @@ RANLIB  = ranlib
 PROJ_DIR = ./
 TEST_DIR = ./testcases
 BIN = ./bin
-
+TEST_FILES := $(wildcard testcases/*.c) 
 LIBRARY = librvm.a
 
 LIB_SRC = rvm.c
@@ -30,7 +30,11 @@ tests: $(LIBRARY)
 	$(CC) -o $(BIN)/multi $(TEST_DIR)/multi.c $(CFLAGS) -L. -lrvm   
 	$(CC) -o $(BIN)/multi-abort $(TEST_DIR)/multi-abort.c $(CFLAGS) -L. -lrvm    
 	$(CC) -o $(BIN)/truncate $(TEST_DIR)/truncate.c $(CFLAGS) -L. -lrvm    
-
+	$(CC) -o $(BIN)/basic9 $(TEST_DIR)/basic9.c $(CFLAGS) -L. -lrvm     
+	$(CC) -o $(BIN)/fullbinary $(TEST_DIR)/fullbinary.c $(CFLAGS) -L. -lrvm      
+	$(CC) -o $(BIN)/semantics_01 $(TEST_DIR)/semantics_01.c $(CFLAGS) -L. -lrvm      
+	$(CC) -o $(BIN)/semantics_02 $(TEST_DIR)/semantics_02.c $(CFLAGS) -L. -lrvm       
+	$(CC) -o $(BIN)/semantics_03 $(TEST_DIR)/semantics_03.c $(CFLAGS) -L. -lrvm       
 clean:
 	$(RM) $(LIBRARY) $(LIB_OBJ)
 	$(RM) bin

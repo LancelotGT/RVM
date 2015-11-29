@@ -52,11 +52,10 @@ rvm_t rvm_init(const char *directory)
 
 void *rvm_map(rvm_t rvm, const char *segname, int size_to_create)
 {   /* use a symbol table to store segname and addr mapping */
-    char path[MAXLINE], logpath[MAXLINE];
+    char path[MAXLINE];
     strcpy(path, rvm.directory);
     strcat(path, "/");
     strcat(path, segname);
-    get_logpath(logpath, path);
 
     check_segment(path, size_to_create);
     rvm_truncate_log(rvm);
@@ -292,7 +291,7 @@ void check_segment(char* filename, int size_to_create)
 int check_addr(trans_t tid, void* segbase)
 {
     int i;
-    for (i = 0; tid->numsegs; i++)
+    for (i = 0; i < tid->numsegs; i++)
         if (tid->segbases[i] == segbase)
             return 1;
     fprintf(stderr, "segment address not associated with transaction\n");

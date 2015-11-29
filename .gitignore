@@ -1,3 +1,7 @@
+# directory
+bin
+rvm_segments
+
 # Compiled Object files
 *.slo
 *.lo
