@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 
 #define TEST_STRING "hello, world"
+#define TEST_STRING2 "hello, earth and moon" 
 #define OFFSET2 1000
 
 
@@ -29,7 +30,7 @@ void proc1()
      sprintf(segs[0], TEST_STRING);
      
      rvm_about_to_modify(trans, segs[0], OFFSET2, 100);
-     sprintf(segs[0]+OFFSET2, TEST_STRING);
+     sprintf(segs[0]+OFFSET2, TEST_STRING2);
      
      rvm_commit_trans(trans);
 
@@ -50,7 +51,7 @@ void proc2()
 	  printf("ERROR: first hello not present\n");
 	  exit(2);
      }
-     if(strcmp(segs[0]+OFFSET2, TEST_STRING)) {
+     if(strcmp(segs[0]+OFFSET2, TEST_STRING2)) {
 	  printf("ERROR: second hello not present\n");
 	  exit(2);
      }

@@ -22,7 +22,6 @@ static void Munmap(void* start, size_t length);
 static void* Malloc(size_t size);
 static void Free(void* ptr);
 static DIR *Opendir(const char *name); 
-static struct dirent *Readdir(DIR *dirp);
 static int Closedir(DIR *dirp);
 
 /* private helper functions */
@@ -43,7 +42,7 @@ rvm_t rvm_init(const char *directory)
 
     struct stat st;
     if (stat(directory, &st) == -1)
-        mkdir(directory, 0700); /* create directory if it does not exist */
+        mkdir(directory, 0777); /* create directory if it does not exist */
 
     strcpy(rvm.directory, directory); /* copy the directory name */
     ST_init(&segment_table[rvm.rid]); /* init the segment lookup table */
@@ -99,7 +98,6 @@ void rvm_destroy(rvm_t rvm, const char *segname)
     /* check if the file exists */
     struct stat sb;
     if (stat(path, &sb) == -1) {
-        fprintf(stderr, "stat error\n");
         return;
     }
 
@@ -118,7 +116,7 @@ trans_t rvm_begin_trans(rvm_t rvm, int numsegs, void **segbases)
     for(i = 0; i < numsegs; i++) {
         segment_t* seg = (segment_t*) ST_get(&segment_table[rvm.rid], segbases[i]);
         if (!seg) {
-            fprintf(stderr, "Cannot find segbase [%lu]\n", segbases[i]);
+            fprintf(stderr, "Cannot find segbase [%lu]\n", (unsigned long) segbases[i]);
             return (trans_t) -1; 
         }
         
@@ -126,6 +124,7 @@ trans_t rvm_begin_trans(rvm_t rvm, int numsegs, void **segbases)
             fprintf(stderr, "Segment already modified\n");
             return (trans_t) -1;
         }
+        seg->modified = 1;
     }
     curr->rid = rvm.rid;
     curr->segbases = segbases;
@@ -154,8 +153,7 @@ void rvm_commit_trans(trans_t tid)
     ST_t* st = &segment_table[tid->rid];
 
     int i;
-    for (i = 0; i < tid->numsegs; i++)
-    {   /* for each data segment */
+    for (i = 0; i < tid->numsegs; i++) {   /* for each data segment */
         segment_t* seg = (segment_t*) ST_get(st, tid->segbases[i]); 
         char logpath[MAXLINE];
         get_logpath(logpath, seg->path);
@@ -164,13 +162,11 @@ void rvm_commit_trans(trans_t tid)
         int fd = Open(logpath, O_RDWR | O_APPEND); ;
         /* write modified segments according to the offset and size
          * in undo logs. Then clear undo logs */
-        while (!list_empty(seg->undo_log))
-        {
+        while (!list_empty(seg->undo_log)) {
             log_t* log = (log_t*) list_pop_front(seg->undo_log);
             write(fd, &log->size, sizeof(int)); /* write size into log file */
             write(fd, &log->offset, sizeof(int)); /* write offset into log file */
             /* write memory segment into log segment */
-            printf("write content: %s\n", (char*) tid->segbases[i] + log->offset);
             write(fd, (char*) tid->segbases[i] + log->offset, log->size); 
             Free(log->data);
             Free(log);
@@ -189,17 +185,16 @@ void rvm_abort_trans(trans_t tid)
 
     /* apply undo logs in a LIFO manner */ 
     int i;
-    for (i = 0; i < tid->numsegs; i++)
-    {
+    for (i = 0; i < tid->numsegs; i++) {
         segment_t* seg = (segment_t*) ST_get(st, tid->segbases[i]); 
 
-        while (!list_empty(seg->undo_log))
-        {
+        while (!list_empty(seg->undo_log)) {
             log_t* log = (log_t*) list_pop_front(seg->undo_log);
             /* copy undo log data back to segment base address + offset */
             memcpy((char*) tid->segbases[i] + log->offset, log->data, log->size);
             Free(log->data);
         }
+        seg->modified = 0;
     }
 
     /* clear the entire transaction */
@@ -214,7 +209,6 @@ void rvm_truncate_log(rvm_t rvm)
        struct dirent* pDirent;
        DIR* pDir;
        pDir = Opendir(rvm.directory);
-       printf("Truncate log in %s\n", rvm.directory);
 
        while ((pDirent = readdir(pDir)) != NULL) {
            char* filename = pDirent->d_name;
@@ -223,12 +217,10 @@ void rvm_truncate_log(rvm_t rvm)
                strcpy(logpath, rvm.directory);
                strcat(logpath, "/");
                strcat(logpath, filename);
-               printf("log path: [%s]\n", logpath);
 
                strcpy(segpath, rvm.directory);
                strcat(segpath, "/"); 
                strncat(segpath, filename, strlen(filename) - 4);
-               printf("segment path: [%s]\n", segpath); 
 
                fflush(stdout);
                apply_log(logpath, segpath);
@@ -305,11 +297,9 @@ void* recover_data(char* path)
     int size;
     int fd = Open(path, O_RDONLY);
     read(fd, &size, sizeof(int));
-    printf("read data size: %d\n", size);
     void* segbase = Malloc(size);
     read(fd, segbase, size);
     Close(fd);
-    printf("return segbase: %lu\n", segbase);
     return segbase;
 }
 
@@ -336,21 +326,14 @@ void apply_log(char* logpath, char* segpath)
     Close(data_fd); 
 
     int pos = 0;
-    while (pos < log_len)
-    {
+    while (pos < log_len) {
         int size = *(int*) (logfile + pos);
-        printf("log segment size: %d\n", size);
         pos += 4;
         int offset = *(int*) (logfile + pos); 
-        printf("log segment offset: %d\n", offset); 
         pos += 4;
 
         /* skip header and transfer data */
         memcpy(datafile + offset + sizeof(int), logfile + pos, size);
-        int i;
-        for (i = 0; i < size; i++)
-            printf("%c", *(char*) (datafile + offset + 4 + i));
-        printf("\n");
         pos += size;
     }
 
@@ -415,16 +398,6 @@ DIR *Opendir(const char *name)
     if (!dirp)
         fprintf(stderr, "opendir error\n");
     return dirp;
-}
-
-struct dirent *Readdir(DIR *dirp)
-{
-    struct dirent *dep;
-    
-    dep = readdir(dirp);
-    if (dep == NULL)
-        fprintf(stderr, "readdir error\n");
-    return dep;
 }
 
 int Closedir(DIR *dirp) 
