@@ -24,6 +24,47 @@ static void Free(void* ptr);
 static DIR *Opendir(const char *name); 
 static int Closedir(DIR *dirp);
 
+/* definition for a simple list used by RVM */
+typedef struct node_t {
+    struct node_t* next; 
+    void* value;
+} node_t; 
+
+typedef struct {
+    node_t* front;
+    node_t* back;
+    int N;
+} list_t;
+
+void list_init(list_t* l);
+void list_enqueue(list_t* l, void* value);
+void list_push(list_t* l, void* value);
+void* list_front(list_t* l);
+void* list_back(list_t* l);
+int list_empty(list_t* l);
+void* list_pop_front(list_t* l);
+void list_destroy(list_t* l);
+
+/* definition for a symbol table used by RVM */
+typedef struct item_t {
+    void* key;
+    void* value;
+    struct item_t* next;
+} item_t; 
+
+typedef struct {
+    item_t* head;
+    item_t* tail;
+    int N;
+} ST_t;
+
+int ST_init(ST_t* st);
+int ST_put(ST_t* st, void* key, void* value);
+void* ST_get(ST_t* st, void* key);
+int ST_erase(ST_t* st, void* key);
+int ST_empty(ST_t* st);
+int ST_destroy(ST_t* st); 
+
 /* private helper functions */
 static void get_logpath(char* logpath, char* path);
 static void apply_log(char* logpath, char* segpath);
@@ -407,3 +448,178 @@ int Closedir(DIR *dirp)
         fprintf(stderr, "closedir error\n");
     return rc;
 }
+
+/* implementation internal data structures */
+void list_init(list_t* l)
+{
+    l->front = NULL;
+    l->back = NULL;
+    l->N = 0;
+}
+
+void list_enqueue(list_t* l, void* value)
+{
+    node_t* node;
+    node = (node_t*) malloc(sizeof(node_t));
+    node->value = value;
+    node->next = NULL;
+
+    if(l->back == NULL)
+        l->front = node;
+    else
+        l->back->next = node;
+
+    l->back = node;
+    l->N++;
+}
+
+void list_push(list_t* l, void* value){
+    node_t* node;
+    node = (node_t*) malloc(sizeof(node_t));
+    node->value = value;
+    node->next = l->front;
+
+    if(l->back == NULL)
+        l->back = node;
+
+    l->front = node;
+    l->N++;
+}
+
+void* list_front(list_t* l)
+{
+    return l->front;
+}
+
+void* list_back(list_t* l) 
+{
+    return l->back;
+}
+
+int list_empty(list_t* l)
+{
+    return l->N == 0;
+}
+
+void* list_pop_front(list_t* l)
+{
+    void* value;
+    node_t* node;
+
+    if(l->front == NULL) {
+        fprintf(stderr, "Error: underflow in steque_pop.\n");
+        fflush(stderr);
+        exit(EXIT_FAILURE);
+    }
+
+    node = l->front;
+    value = node->value;
+
+    l->front = l->front->next;
+    if (l->front == NULL) l->back = NULL;
+    free(node);
+    l->N--;
+
+    return value;
+}
+
+void list_destroy(list_t* l)
+{
+    while (!list_empty(l))
+        list_pop_front(l);
+}
+
+int ST_init(ST_t* st) 
+{
+    if (!st) return -1;
+    st->head = NULL;
+    st->tail = NULL;
+    st->N = 0;
+    return 0;
+}
+
+int ST_put(ST_t* st, void* key, void* value)
+{
+    if (!st) return -1;
+    item_t* new_item = (item_t*) malloc(sizeof(item_t));
+    new_item->key = key;
+    new_item->value = value;
+    new_item->next = NULL; 
+
+    if (st->head == NULL) {
+        st->head = st->tail = new_item;
+    }
+    else {
+        st->tail->next = new_item;
+        st->tail = new_item;
+    }
+    st->N++;
+    return 0;
+}
+
+void* ST_get(ST_t* st, void* key)
+{
+    if (!st) return NULL;
+
+    item_t* current = st->head;
+
+    while (current != st->tail) {
+        if (current->key == key)
+            return current->value;
+        current = current->next;
+    }
+    if (current->key == key)
+        return current->value;
+    return NULL;
+}
+
+int ST_erase(ST_t* st, void* key)
+{
+    if (!st) return -1;
+    item_t* current = st->head;
+
+    if (current->key == key) { /* item to remove is head */
+        item_t* erased = current;
+        st->head = current->next;
+        if (erased == st->tail)
+            st->tail = NULL;
+        free(erased); 
+        st->N--;
+        return 0;
+    }
+    else {
+        while (current->next != st->tail) {
+            if (current->next->key == key) {
+                item_t* erased = current->next;
+                current->next = erased->next;
+                free(erased);
+                st->N--; 
+                return 0;
+            }
+            current = current->next;
+        } 
+        
+        if (current->next->key == key) { /* item to remove is tail */ 
+            free(current->next);
+            current->next = NULL;
+            st->tail = current;
+            st->N--; 
+            return 0;
+        }
+    }
+
+    return -1; /* no item found */
+} 
+
+int ST_empty(ST_t* st)
+{
+    return st->N == 0;
+}
+
+int ST_destroy(ST_t* st)
+{
+    if (!st) return -1;
+    while (!ST_empty(st))
+        ST_erase(st, st->head->key);
+    return 0;
+} 
